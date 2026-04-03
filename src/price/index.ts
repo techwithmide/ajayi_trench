@@ -1,6 +1,6 @@
-import { fetchDexScreenerPrices } from "./dexscreener";
-import { fetchGeckoTerminalPrices } from "./geckoterminal";
-import type { TokenInfo } from "../types";
+import { fetchDexScreenerPrices } from "./dexscreener.js";
+import { fetchGeckoTerminalPrices } from "./geckoterminal.js";
+import type { TokenInfo } from "../types.js";
 
 /**
  * Fetch full token info for a single mint.

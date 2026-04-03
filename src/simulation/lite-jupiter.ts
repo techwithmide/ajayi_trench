@@ -1,4 +1,4 @@
-import type { SimulatedTrade } from "../types";
+import type { SimulatedTrade } from "../types.js";
 
 const QUOTE_URL = "https://lite-api.jup.ag/swap/v1/quote";
 const USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";

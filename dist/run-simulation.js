@@ -1,4 +1,4 @@
-import { simulateBuy } from "./simulation/lite-jupiter";
+import { simulateBuy } from "./simulation/lite-jupiter.js";
 const SCENARIOS = [
     {
         label: "SOL (well-known, deep liquidity)",

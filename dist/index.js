@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { createBot } from "./bot";
+import { createBot } from "./bot/index.js";
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 if (!TOKEN) {
     console.error("TELEGRAM_BOT_TOKEN is not set. Copy .env.example → .env and fill it in.");

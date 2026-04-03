@@ -6,16 +6,16 @@ import {
   getOpenPositionsForChat,
   getClosedPositionsForChat,
   closePosition,
-} from "../db";
-import { fetchTokenInfo, fetchCurrentPrice } from "../price";
-import { simulateBuy, simulateSell } from "../simulation/lite-jupiter";
+} from "../db/index.js";
+import { fetchTokenInfo, fetchCurrentPrice } from "../price/index.js";
+import { simulateBuy, simulateSell } from "../simulation/lite-jupiter.js";
 import {
   startWatcher,
   stopWatcher,
   restoreWatchers,
   getActiveWatcherCountForChat,
-} from "../watcher/manager";
-import type { NotifyFn } from "../watcher/manager";
+} from "../watcher/manager.js";
+import type { NotifyFn } from "../watcher/manager.js";
 import {
   formatUsd,
   formatPnL,
@@ -25,7 +25,7 @@ import {
   isSolanaAddress,
   truncateAddress,
   generateId,
-} from "../utils/format";
+} from "../utils/format.js";
 
 const VIRTUAL_USD = 100;
 

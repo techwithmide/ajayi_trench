@@ -1,7 +1,7 @@
-import { getAllOpenPositions, getOpenPositionsForChat, updatePositionPrice, closePosition, } from "../db";
-import { fetchCurrentPrice } from "../price";
-import { simulateSell } from "../simulation/lite-jupiter";
-import { formatUsd, formatPnL, formatPercent, formatDuration, } from "../utils/format";
+import { getAllOpenPositions, getOpenPositionsForChat, updatePositionPrice, closePosition, } from "../db/index.js";
+import { fetchCurrentPrice } from "../price/index.js";
+import { simulateSell } from "../simulation/lite-jupiter.js";
+import { formatUsd, formatPnL, formatPercent, formatDuration, } from "../utils/format.js";
 const POLL_INTERVAL_MS = parseInt(process.env.POLL_INTERVAL_MS ?? "30000", 10);
 const TAKE_PROFIT_THRESHOLD = 1.0; // +100%
 const STOP_LOSS_THRESHOLD = -0.5; // -50%

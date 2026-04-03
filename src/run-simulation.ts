@@ -1,4 +1,4 @@
-import { simulateBuy } from "./simulation/lite-jupiter";
+import { simulateBuy } from "./simulation/lite-jupiter.js";
 
 const SCENARIOS: { label: string; mint: string; usd: number }[] = [
   {

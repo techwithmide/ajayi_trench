@@ -1,4 +1,4 @@
-import type { TokenInfo } from "../types";
+import type { TokenInfo } from "../types.js";
 /**
  * Fetch full token info for a single mint.
  * Tries DexSecreener first, falls back to GeckoTerminal.

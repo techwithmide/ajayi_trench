@@ -1,4 +1,4 @@
-import { fetchTokenInfo, fetchCurrentPrice, batchFetchPrices } from "./price";
+import { fetchTokenInfo, fetchCurrentPrice, batchFetchPrices } from "./price/index.js";
 const MINTS = {
     ANIME: "82MmG1uH2BWLyoU7VCFYMohP9CT63q5paiKHAAAn3zWx",
     ROCKET: "4YiLHDR4B4pE4R5GUMA8HG8YunyeLwcobtEtvwMupump",

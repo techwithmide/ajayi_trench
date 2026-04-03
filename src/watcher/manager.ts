@@ -3,16 +3,16 @@ import {
   getOpenPositionsForChat,
   updatePositionPrice,
   closePosition,
-} from "../db";
-import { fetchCurrentPrice } from "../price";
-import { simulateSell } from "../simulation/lite-jupiter";
-import type { Position } from "../types";
+} from "../db/index.js";
+import { fetchCurrentPrice } from "../price/index.js";
+import { simulateSell } from "../simulation/lite-jupiter.js";
+import type { Position } from "../types.js";
 import {
   formatUsd,
   formatPnL,
   formatPercent,
   formatDuration,
-} from "../utils/format";
+} from "../utils/format.js";
 
 const POLL_INTERVAL_MS = parseInt(process.env.POLL_INTERVAL_MS ?? "30000", 10);
 const TAKE_PROFIT_THRESHOLD = 1.0; // +100%

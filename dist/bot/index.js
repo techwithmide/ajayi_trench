@@ -1,9 +1,9 @@
 import { Bot } from "grammy";
-import { createPosition, getPositionByIdForChat, getOpenPositionByMintForChat, getOpenPositionsForChat, getClosedPositionsForChat, closePosition, } from "../db";
-import { fetchTokenInfo, fetchCurrentPrice } from "../price";
-import { simulateBuy, simulateSell } from "../simulation/lite-jupiter";
-import { startWatcher, stopWatcher, restoreWatchers, getActiveWatcherCountForChat, } from "../watcher/manager";
-import { formatUsd, formatPnL, formatPercent, formatDuration, formatTimestamp, isSolanaAddress, truncateAddress, generateId, } from "../utils/format";
+import { createPosition, getPositionByIdForChat, getOpenPositionByMintForChat, getOpenPositionsForChat, getClosedPositionsForChat, closePosition, } from "../db/index.js";
+import { fetchTokenInfo, fetchCurrentPrice } from "../price/index.js";
+import { simulateBuy, simulateSell } from "../simulation/lite-jupiter.js";
+import { startWatcher, stopWatcher, restoreWatchers, getActiveWatcherCountForChat, } from "../watcher/manager.js";
+import { formatUsd, formatPnL, formatPercent, formatDuration, formatTimestamp, isSolanaAddress, truncateAddress, generateId, } from "../utils/format.js";
 const VIRTUAL_USD = 100;
 export function createBot(token) {
     const bot = new Bot(token);

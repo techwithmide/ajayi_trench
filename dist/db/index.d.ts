@@ -1,5 +1,5 @@
 import Database from "better-sqlite3";
-import type { Position } from "../types";
+import type { Position } from "../types.js";
 export declare function getDb(): Database.Database;
 export declare function createPosition(pos: Omit<Position, "status">): Position;
 export declare function updatePositionPrice(id: string, currentPrice: number): void;

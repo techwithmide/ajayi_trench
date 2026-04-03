@@ -1,4 +1,4 @@
-import type { TokenInfo } from "../types";
+import type { TokenInfo } from "../types.js";
 
 const BASE_URL = "https://api.dexscreener.com/latest/dex/tokens";
 

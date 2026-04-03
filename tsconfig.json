@@ -5,8 +5,8 @@
     "outDir": "./dist",
 
     // Module System (changed)
-    "module": "ESNext",
-    "moduleResolution": "bundler",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "target": "ES2022",
 
     // Node types (important)

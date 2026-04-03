@@ -1,4 +1,4 @@
-import type { JupiterQuote, SimulatedTrade } from "../types";
+import type { JupiterQuote, SimulatedTrade } from "../types.js";
 
 const QUOTE_URL = "https://quote-api.jup.ag/v6/quote";
 const USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";

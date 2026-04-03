@@ -1,5 +1,5 @@
-import { fetchDexScreenerPrices } from "./dexscreener";
-import { fetchGeckoTerminalPrices } from "./geckoterminal";
+import { fetchDexScreenerPrices } from "./dexscreener.js";
+import { fetchGeckoTerminalPrices } from "./geckoterminal.js";
 /**
  * Fetch full token info for a single mint.
  * Tries DexSecreener first, falls back to GeckoTerminal.

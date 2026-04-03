@@ -1,4 +1,4 @@
-import { simulateBuy, simulateSell } from "./simulation/lite-jupiter";
+import { simulateBuy, simulateSell } from "./simulation/lite-jupiter.js";
 
 async function main() {
   // Example meme token (you can replace this)

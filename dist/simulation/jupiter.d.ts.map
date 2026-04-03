@@ -1,1 +1,1 @@
-{"version":3,"file":"jupiter.d.ts","sourceRoot":"","sources":["../../src/simulation/jupiter.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAgB,cAAc,EAAE,MAAM,UAAU,CAAC;AAO7D,wBAAsB,WAAW,CAC/B,SAAS,EAAE,MAAM,EACjB,SAAS,SAAM,GACd,OAAO,CAAC,cAAc,GAAG,IAAI,CAAC,CAsChC"}
+{"version":3,"file":"jupiter.d.ts","sourceRoot":"","sources":["../../src/simulation/jupiter.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAgB,cAAc,EAAE,MAAM,aAAa,CAAC;AAOhE,wBAAsB,WAAW,CAC/B,SAAS,EAAE,MAAM,EACjB,SAAS,SAAM,GACd,OAAO,CAAC,cAAc,GAAG,IAAI,CAAC,CAsChC"}

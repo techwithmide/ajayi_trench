@@ -1,4 +1,4 @@
-import type { Position } from "../types";
+import type { Position } from "../types.js";
 export type NotifyFn = (chatId: string, message: string) => Promise<void>;
 export declare function startWatcher(position: Position, notify: NotifyFn): void;
 export declare function stopWatcher(positionId: string): void;
