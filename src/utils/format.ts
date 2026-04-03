@@ -43,3 +43,10 @@ export function generateId(): string {
   const rand = Math.random().toString(36).slice(2, 6);
   return `pos_${ts}_${rand}`;
 }
+
+export function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}

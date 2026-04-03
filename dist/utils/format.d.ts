@@ -6,4 +6,5 @@ export declare function formatTimestamp(ms: number): string;
 export declare function isSolanaAddress(str: string): boolean;
 export declare function truncateAddress(address: string): string;
 export declare function generateId(): string;
+export declare function escapeHtml(s: string): string;
 //# sourceMappingURL=format.d.ts.map

@@ -20,6 +20,24 @@ export interface Position {
   exitReason?: "TAKE_PROFIT" | "STOP_LOSS" | "MANUAL";
   currentPrice?: number;
   lastUpdated?: number;
+  /** Telegram user who opened the trade (for per-chat leaderboard). */
+  openedByUserId?: number | null;
+  openedByUsername?: string | null;
+}
+
+/** Aggregated realised stats per trader (closed positions only). */
+export interface LeaderboardEntry {
+  /**
+   * Group key: `opened_by_user_id` when set; otherwise `chat_id` for legacy rows
+   * (splits private DMs per user; group legacy stays one row per group).
+   */
+  bucketKey: number;
+  openedByUserId: number | null;
+  username: string | null;
+  realisedPnl: number;
+  wins: number;
+  losses: number;
+  trades: number;
 }
 
 // TOKEN

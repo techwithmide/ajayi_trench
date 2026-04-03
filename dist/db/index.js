@@ -12,7 +12,54 @@ export function getDb() {
     _db.pragma("journal_mode = WAL");
     _db.pragma("foreign_keys = ON");
     initSchema(_db);
+    initTelegramUsersTable(_db);
     return _db;
+}
+function initTelegramUsersTable(db) {
+    db.exec(`
+    CREATE TABLE IF NOT EXISTS telegram_users (
+      user_id INTEGER PRIMARY KEY NOT NULL,
+      username TEXT,
+      first_name TEXT,
+      last_name TEXT,
+      updated_at INTEGER NOT NULL
+    );
+  `);
+}
+/** Remember names from any update (getChat may fail if user blocked the bot). */
+export function upsertTelegramUser(from) {
+    if (!from?.id)
+        return;
+    getDb()
+        .prepare(`
+INSERT INTO telegram_users (user_id, username, first_name, last_name, updated_at)
+VALUES (@id, @username, @first_name, @last_name, @updated_at)
+ON CONFLICT(user_id) DO UPDATE SET
+  username = excluded.username,
+  first_name = excluded.first_name,
+  last_name = excluded.last_name,
+  updated_at = excluded.updated_at
+`)
+        .run({
+        id: from.id,
+        username: from.username ?? null,
+        first_name: from.first_name ?? null,
+        last_name: from.last_name ?? null,
+        updated_at: Date.now(),
+    });
+}
+export function getCachedTelegramUser(userId) {
+    const row = getDb()
+        .prepare(`SELECT * FROM telegram_users WHERE user_id = ?`)
+        .get(userId);
+    if (!row)
+        return null;
+    return {
+        userId: row.user_id,
+        username: row.username,
+        firstName: row.first_name,
+        lastName: row.last_name,
+    };
 }
 function initSchema(db) {
     db.exec(`
@@ -34,17 +81,32 @@ function initSchema(db) {
     status TEXT NOT NULL DEFAULT 'OPEN',
     exit_reason TEXT,
     current_price REAL,
-    last_updated INTEGER
+    last_updated INTEGER,
+    opened_by_user_id INTEGER,
+    opened_by_username TEXT
     );
     `);
+    migratePositionsColumns(db);
+}
+function migratePositionsColumns(db) {
+    const cols = db
+        .prepare("PRAGMA table_info(positions)")
+        .all();
+    const names = new Set(cols.map((c) => c.name));
+    if (!names.has("opened_by_user_id")) {
+        db.exec("ALTER TABLE positions ADD COLUMN opened_by_user_id INTEGER");
+    }
+    if (!names.has("opened_by_username")) {
+        db.exec("ALTER TABLE positions ADD COLUMN opened_by_username TEXT");
+    }
 }
 export function createPosition(pos) {
     const db = getDb();
     const position = { ...pos, status: "OPEN" };
     db.prepare(`
   INSERT INTO positions (
-id, chat_id,  mint, symbol, name, entry_price, entry_time, virtual_usd, token_amount_raw, status, current_price, last_updated) VALUES (
-@id, @chat_id, @mint, @symbol, @name, @entryPrice, @entryTime, @virtualUsd, @tokenAmountRaw, @status, @currentPrice, @lastUpdated
+id, chat_id,  mint, symbol, name, entry_price, entry_time, virtual_usd, token_amount_raw, status, current_price, last_updated, opened_by_user_id, opened_by_username) VALUES (
+@id, @chat_id, @mint, @symbol, @name, @entryPrice, @entryTime, @virtualUsd, @tokenAmountRaw, @status, @currentPrice, @lastUpdated, @openedByUserId, @openedByUsername
 )
   `).run({
         id: position.id,
@@ -59,6 +121,8 @@ id, chat_id,  mint, symbol, name, entry_price, entry_time, virtual_usd, token_am
         status: position.status,
         currentPrice: position.currentPrice ?? position.entryPrice,
         lastUpdated: position.lastUpdated ?? Date.now(),
+        openedByUserId: position.openedByUserId ?? null,
+        openedByUsername: position.openedByUsername ?? null,
     });
     return position;
 }
@@ -126,6 +190,38 @@ export function getClosedPositionsForChat(chatId) {
         .prepare(`SELECT * FROM positions WHERE status = 'CLOSED' AND chat_id = ? ORDER BY exit_time DESC`)
         .all(Number(chatId)).map(rowToPosition);
 }
+/**
+ * Rank traders bot-wide by realised P&L (closed positions only, all chats).
+ * Rows with `opened_by_user_id` merge by user; legacy rows split by `chat_id`
+ * (private chats → one row per user; group legacy → one row per group).
+ */
+export function getLeaderboardGlobal() {
+    const rows = getDb()
+        .prepare(`
+SELECT
+  COALESCE(opened_by_user_id, chat_id) AS bucketKey,
+  MAX(opened_by_user_id) AS openedByUserId,
+  MAX(opened_by_username) AS username,
+  SUM(pnl_usd) AS realisedPnl,
+  SUM(CASE WHEN pnl_usd > 0 THEN 1 ELSE 0 END) AS wins,
+  SUM(CASE WHEN pnl_usd <= 0 THEN 1 ELSE 0 END) AS losses,
+  COUNT(*) AS trades
+FROM positions
+WHERE status = 'CLOSED' AND pnl_usd IS NOT NULL
+GROUP BY COALESCE(opened_by_user_id, chat_id)
+ORDER BY realisedPnl DESC
+`)
+        .all();
+    return rows.map((r) => ({
+        bucketKey: r.bucketKey,
+        openedByUserId: r.openedByUserId,
+        username: r.username,
+        realisedPnl: r.realisedPnl,
+        wins: r.wins,
+        losses: r.losses,
+        trades: r.trades,
+    }));
+}
 function rowToPosition(row) {
     return {
         id: row.id,
@@ -146,6 +242,8 @@ function rowToPosition(row) {
         exitReason: row.exit_reason ?? undefined,
         currentPrice: row.current_price ?? undefined,
         lastUpdated: row.last_updated ?? undefined,
+        openedByUserId: row.opened_by_user_id ?? null,
+        openedByUsername: row.opened_by_username ?? null,
     };
 }
 //# sourceMappingURL=index.js.map

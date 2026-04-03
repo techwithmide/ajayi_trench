@@ -1,12 +1,77 @@
 import { Bot } from "grammy";
-import { createPosition, getPositionByIdForChat, getOpenPositionByMintForChat, getOpenPositionsForChat, getClosedPositionsForChat, closePosition, } from "../db/index.js";
+import { createPosition, getPositionByIdForChat, getOpenPositionByMintForChat, getOpenPositionsForChat, getClosedPositionsForChat, getLeaderboardGlobal, getCachedTelegramUser, upsertTelegramUser, closePosition, } from "../db/index.js";
 import { fetchTokenInfo, fetchCurrentPrice } from "../price/index.js";
 import { simulateBuy, simulateSell } from "../simulation/lite-jupiter.js";
 import { startWatcher, stopWatcher, restoreWatchers, getActiveWatcherCountForChat, } from "../watcher/manager.js";
-import { formatUsd, formatPnL, formatPercent, formatDuration, formatTimestamp, isSolanaAddress, truncateAddress, generateId, } from "../utils/format.js";
+import { formatUsd, formatPnL, formatPercent, formatDuration, formatTimestamp, isSolanaAddress, truncateAddress, generateId, escapeHtml, } from "../utils/format.js";
 const VIRTUAL_USD = 100;
+function upsertFromTelegramUser(user) {
+    upsertTelegramUser({
+        id: user.id,
+        first_name: user.first_name,
+        ...(user.username != null ? { username: user.username } : {}),
+        ...(user.last_name != null ? { last_name: user.last_name } : {}),
+    });
+}
+/** Resolve @username / name via DB cache, then Telegram getChat; falls back to id. */
+async function resolveLeaderboardLabel(api, e) {
+    const legacySuffix = e.openedByUserId == null ? ` <i>(legacy)</i>` : "";
+    if (e.username) {
+        return `@${escapeHtml(e.username)}${legacySuffix}`;
+    }
+    const chatIdStr = String(e.bucketKey);
+    if (e.bucketKey > 0) {
+        const cached = getCachedTelegramUser(e.bucketKey);
+        if (cached?.username) {
+            return `@${escapeHtml(cached.username)}${legacySuffix}`;
+        }
+        if (cached?.firstName) {
+            const name = [cached.firstName, cached.lastName].filter(Boolean).join(" ");
+            return `${escapeHtml(name)}${legacySuffix}`;
+        }
+    }
+    try {
+        const chat = await api.getChat(chatIdStr);
+        if (chat.type === "private") {
+            if (e.bucketKey > 0) {
+                upsertTelegramUser({
+                    id: e.bucketKey,
+                    first_name: chat.first_name,
+                    ...(chat.username != null ? { username: chat.username } : {}),
+                    ...(chat.last_name != null ? { last_name: chat.last_name } : {}),
+                });
+            }
+            if (chat.username)
+                return `@${escapeHtml(chat.username)}${legacySuffix}`;
+            const name = [chat.first_name, chat.last_name].filter(Boolean).join(" ");
+            if (name)
+                return `${escapeHtml(name)}${legacySuffix}`;
+        }
+        if (chat.type === "group" ||
+            chat.type === "supergroup" ||
+            chat.type === "channel") {
+            if ("username" in chat && chat.username)
+                return `@${escapeHtml(chat.username)}${legacySuffix}`;
+            if ("title" in chat && chat.title)
+                return `${escapeHtml(chat.title)}${legacySuffix}`;
+        }
+    }
+    catch {
+        // Bot can’t see chat (blocked, deleted, etc.)
+    }
+    if (e.bucketKey < 0) {
+        return `Group <code>${e.bucketKey}</code>${legacySuffix}`;
+    }
+    return `User <code>${e.bucketKey}</code>${legacySuffix}`;
+}
 export function createBot(token) {
     const bot = new Bot(token);
+    // Cache Telegram profile fields (leaderboard + getChat failures when user blocked bot)
+    bot.use(async (ctx, next) => {
+        if (ctx.from)
+            upsertFromTelegramUser(ctx.from);
+        return next();
+    });
     // ─── Access control (closed experiment) ────────────────────────────────────
     // Set one or both:
     // - BOT_WHITELIST_CHAT_IDS="1271800239,12345"
@@ -72,6 +137,7 @@ export function createBot(token) {
             `/positions — Open positions + unrealised P&L\n` +
             `/history   — Closed trade history\n` +
             `/pnl       — Weekly performance summary\n` +
+            `/leaderboard — Global: traders by realised P&amp;L (wins / losses)\n` +
             `/close &lt;id&gt; — Manually close a position`, { parse_mode: "HTML" });
     });
     // ─── CA paste → open position ──────────────────────────────────────────────
@@ -125,6 +191,8 @@ export function createBot(token) {
                 tokenAmountRaw: trade?.outputAmountRaw ?? "0",
                 currentPrice: tokenInfo.priceUsd,
                 lastUpdated: Date.now(),
+                openedByUserId: ctx.from?.id ?? null,
+                openedByUsername: ctx.from?.username ?? null,
             });
             // ── Step 4: Start price watcher ──
             startWatcher(position, notify);
@@ -230,6 +298,32 @@ export function createBot(token) {
             `Unrealised P&L: <b>${formatPnL(unrealised)}</b>\n` +
             `Net P&L:        <b>${formatPnL(realised + unrealised)}</b>\n\n` +
             `Active watchers (your chat): <b>${getActiveWatcherCountForChat(chatIdStr)}</b>`, { parse_mode: "HTML" });
+    });
+    // ─── /leaderboard ─────────────────────────────────────────────────────────
+    bot.command("leaderboard", async (ctx) => {
+        const rows = getLeaderboardGlobal();
+        if (rows.length === 0) {
+            await ctx.reply("<b>Global leaderboard</b>\n\nNo closed trades yet. " +
+                "When any user’s positions hit TP/SL or are /closed, stats appear here.", { parse_mode: "HTML" });
+            return;
+        }
+        const medals = ["🥇", "🥈", "🥉"];
+        const top = rows.slice(0, 20);
+        const lines = await Promise.all(top.map(async (e, i) => {
+            const medal = i < 3 ? `${medals[i]} ` : `${i + 1}. `;
+            const who = await resolveLeaderboardLabel(ctx.api, e);
+            const wr = e.trades > 0 ? ((e.wins / e.trades) * 100).toFixed(1) : "0.0";
+            return [
+                `${medal}<b>${who}</b>`,
+                `   P&amp;L: <b>${formatPnL(e.realisedPnl)}</b>  |  🟢 ${e.wins}W  🔴 ${e.losses}L  (${wr}% WR)  ·  ${e.trades} closed`,
+            ].join("\n");
+        }));
+        const more = rows.length > top.length
+            ? `\n\n<i>Showing top ${top.length} of ${rows.length} traders.</i>`
+            : "";
+        await ctx.reply(`<b>Global leaderboard</b> — all chats (realised P&amp;L, closed trades only)\n\n` +
+            lines.join("\n\n") +
+            more, { parse_mode: "HTML" });
     });
     // ─── /close <id> ───────────────────────────────────────────────────────────
     bot.command("close", async (ctx) => {
