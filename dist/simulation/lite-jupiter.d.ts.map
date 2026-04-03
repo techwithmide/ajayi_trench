@@ -1,0 +1,1 @@
+{"version":3,"file":"lite-jupiter.d.ts","sourceRoot":"","sources":["../../src/simulation/lite-jupiter.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,cAAc,EAAE,MAAM,UAAU,CAAC;AAqB/C,wBAAsB,WAAW,CAC/B,SAAS,EAAE,MAAM,EACjB,SAAS,SAAM,GACd,OAAO,CAAC,cAAc,GAAG,IAAI,CAAC,CA2ChC;AAED,wBAAsB,YAAY,CAChC,SAAS,EAAE,MAAM,EACjB,cAAc,EAAE,MAAM,GACrB,OAAO,CAAC,cAAc,GAAG,IAAI,CAAC,CA0ChC"}
