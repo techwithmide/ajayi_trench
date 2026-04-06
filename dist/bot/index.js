@@ -3,8 +3,10 @@ import { createPosition, getPositionByIdForChat, getOpenPositionByMintForChat, g
 import { fetchTokenInfo, fetchCurrentPrice } from "../price/index.js";
 import { simulateBuy, simulateSell } from "../simulation/lite-jupiter.js";
 import { startWatcher, stopWatcher, restoreWatchers, getActiveWatcherCountForChat, } from "../watcher/manager.js";
-import { formatUsd, formatPnL, formatPercent, formatDuration, formatTimestamp, isSolanaAddress, truncateAddress, generateId, escapeHtml, } from "../utils/format.js";
+import { formatUsd, formatPnL, formatPercent, formatDuration, formatTimestamp, isSolanaAddress, truncateAddress, generateId, escapeHtml, formatTpSlFromFractions, } from "../utils/format.js";
+import { isStrategyAccessRestricted, isUserAllowedForBot, resolveStrategyForUser, } from "../strategy/config.js";
 const VIRTUAL_USD = 100;
+const POLL_SEC = Math.max(1, Math.round(parseInt(process.env.POLL_INTERVAL_MS ?? "30000", 10) / 1000));
 function upsertFromTelegramUser(user) {
     upsertTelegramUser({
         id: user.id,
@@ -72,32 +74,19 @@ export function createBot(token) {
             upsertFromTelegramUser(ctx.from);
         return next();
     });
-    // ─── Access control (closed experiment) ────────────────────────────────────
-    // Set one or both:
-    // - BOT_WHITELIST_CHAT_IDS="1271800239,12345"
-    // - BOT_WHITELIST_USERNAMES="techwithmide,otheruser" (without @)
-    const whitelistChatIds = new Set((process.env.BOT_WHITELIST_CHAT_IDS ?? "")
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean));
-    const whitelistUsernames = new Set((process.env.BOT_WHITELIST_USERNAMES ?? "")
-        .split(",")
-        .map((s) => s.trim().replace(/^@/, "").toLowerCase())
-        .filter(Boolean));
+    // ─── Access control (closed experiment whitelist) ─────────────────────────
+    // BOT_WHITELIST_CHAT_IDS / BOT_WHITELIST_USERNAMES
+    // If unset → open access.
     bot.use(async (ctx, next) => {
-        // If no whitelist configured, allow everything (to avoid accidental lockout)
-        if (whitelistChatIds.size === 0 && whitelistUsernames.size === 0) {
+        if (!isStrategyAccessRestricted()) {
             return next();
         }
         const chatId = ctx.chat?.id?.toString();
         const username = ctx.from?.username?.toLowerCase();
-        const allowed = (chatId && whitelistChatIds.has(chatId)) ||
-            (username && whitelistUsernames.has(username));
+        const allowed = isUserAllowedForBot(chatId, ctx.from?.username ?? null);
         if (!allowed) {
-            // Keep response minimal to avoid leaking details
             if (chatId)
                 console.warn(`[Auth] blocked chat=${chatId} user=@${username ?? "?"}`);
-            // Only attempt to reply when possible; ignore failures
             try {
                 await ctx.reply("⛔️ This bot is in a closed test.");
             }
@@ -127,13 +116,13 @@ export function createBot(token) {
     restoreWatchers(notify).catch(console.error);
     // ─── /start ────────────────────────────────────────────────────────────────
     bot.command("start", async (ctx) => {
+        const strat = resolveStrategyForUser(ctx.chat?.id?.toString(), ctx.from?.username ?? null);
         await ctx.reply(`<b>AJAYI Trench Bot</b>\n\n` +
             `Paste any Solana token contract address and I'll open a simulated <b>$${VIRTUAL_USD}</b> position.\n\n` +
             `Buys and sells are simulated via <b>Jupiter</b> (real slippage, real pool depth).\n\n` +
-            `<b>Strategy:</b>\n` +
-            `Take profit at <b>+100%</b>\n` +
-            `Stop loss at <b>−50%</b>\n\n` +
-            `<b>Commands:</b>\n` +
+            `<b>Your strategy for new trades:</b>\n` +
+            `${formatTpSlFromFractions(strat.takeProfitThreshold, strat.stopLossThreshold)}\n` +
+            `\n<b>Commands:</b>\n` +
             `/positions — Open positions + unrealised P&L\n` +
             `/history   — Closed trade history\n` +
             `/pnl       — Weekly performance summary\n` +
@@ -178,7 +167,8 @@ export function createBot(token) {
                 await edit(`⚠️ <b>${tokenInfo.symbol}</b> — Jupiter has no route for this token yet.\n\n` +
                     `Position will still be tracked by price change only (no slippage simulation at exit).`);
             }
-            // ── Step 3: Persist the position ──
+            // ── Step 3: Persist the position (TP/SL snapshotted from your tier at open) ──
+            const strat = resolveStrategyForUser(chatIdStr, ctx.from?.username ?? null);
             const position = createPosition({
                 id: generateId(),
                 chatId: chatIdStr,
@@ -193,6 +183,9 @@ export function createBot(token) {
                 lastUpdated: Date.now(),
                 openedByUserId: ctx.from?.id ?? null,
                 openedByUsername: ctx.from?.username ?? null,
+                takeProfitThreshold: strat.takeProfitThreshold,
+                stopLossThreshold: strat.stopLossThreshold,
+                strategyProfileId: strat.id,
             });
             // ── Step 4: Start price watcher ──
             startWatcher(position, notify);
@@ -205,7 +198,8 @@ export function createBot(token) {
                 `Mint: <code>${mint}</code>\n` +
                 `ID:   <code>${position.id}</code>\n\n` +
                 `${jupiterBlock}\n\n` +
-                `TP: <b>+100%</b>  🛑 SL: <b>−50%</b>  📡 Poll: <b>30s</b>`);
+                `${formatTpSlFromFractions(position.takeProfitThreshold, position.stopLossThreshold)}  ·  <code>${position.strategyProfileId}</code>\n` +
+                `📡 Poll: <b>${POLL_SEC}s</b>`);
         }
         catch (err) {
             console.error("[Bot] Error opening position:", err);
@@ -226,7 +220,8 @@ export function createBot(token) {
             const arrow = changePct >= 0 ? "🟢" : "🔴";
             const held = formatDuration(p.entryTime, Date.now());
             return [
-                `${i + 1}. ${arrow} <b>$${p.symbol}</b> — <code>${p.id}</code>`,
+                `${i + 1}. ${arrow} <b>$${p.symbol}</b> — <code>${p.id}</code> · <code>${p.strategyProfileId}</code>`,
+                `   ${formatTpSlFromFractions(p.takeProfitThreshold, p.stopLossThreshold)}`,
                 `   Entry ${formatUsd(p.entryPrice)} → Now ${formatUsd(current)}`,
                 `   Unrealised: <b>${formatPnL(unrealised)}</b> (${formatPercent(changePct)}) | Held: ${held}`,
             ].join("\n");

@@ -1,3 +1,9 @@
+/**
+ * Current strategy is `trench_60` (TP +60% / SL −40%).
+ * Keep legacy ids for old DB rows.
+ */
+export type StrategyProfileId = "trench_60" | "trench_100" | "trench_30";
+
 // POSITION
 export interface Position {
   id: string;
@@ -23,6 +29,11 @@ export interface Position {
   /** Telegram user who opened the trade (for per-chat leaderboard). */
   openedByUserId?: number | null;
   openedByUsername?: string | null;
+  /** Price move vs entry to trigger TP (e.g. 0.6 = +60%). */
+  takeProfitThreshold: number;
+  /** Negative fraction for SL (e.g. -0.4 = −40%). */
+  stopLossThreshold: number;
+  strategyProfileId: StrategyProfileId;
 }
 
 /** Aggregated realised stats per trader (closed positions only). */

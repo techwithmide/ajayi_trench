@@ -14,7 +14,8 @@ bot.catch((err) => {
 bot.start({
     onStart: (info) => {
         console.log(`Paper trader running as @${info.username}`);
-        console.log(`Tracking Solana tokens | TP +100% | SL -50% | Poll 30s`);
+        const pollSec = Math.max(1, Math.round(parseInt(process.env.POLL_INTERVAL_MS ?? "30000", 10) / 1000));
+        console.log(`Tracking Solana tokens | TP +60% | SL −40% | Poll ${pollSec}s`);
         console.log(`DB: ${process.env.DB_PATH ?? "./data/positions.db"}`);
         if (health) {
             console.log(`Health: GET http://<your-vps-ip>:${health.port}/health  (or curl localhost:${health.port}/health on the server)\n`);

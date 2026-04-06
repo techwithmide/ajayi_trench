@@ -14,6 +14,11 @@ export function formatPercent(pct: number): string {
   return `${sign}${pct.toFixed(2)}%`;
 }
 
+/** TP/SL from price-change fractions (e.g. tp=0.6 → +60%, sl=-0.4 → −40%). */
+export function formatTpSlFromFractions(tp: number, sl: number): string {
+  return `TP <b>${formatPercent(tp * 100)}</b> · SL <b>${formatPercent(sl * 100)}</b>`;
+}
+
 export function formatDuration(startMs: number, endMs: number): string {
   const diff = endMs - startMs;
   const totalMins = Math.floor(diff / 60_000);

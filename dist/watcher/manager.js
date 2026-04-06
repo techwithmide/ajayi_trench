@@ -3,15 +3,13 @@ import { fetchCurrentPrice } from "../price/index.js";
 import { simulateSell } from "../simulation/lite-jupiter.js";
 import { formatUsd, formatPnL, formatPercent, formatDuration, } from "../utils/format.js";
 const POLL_INTERVAL_MS = parseInt(process.env.POLL_INTERVAL_MS ?? "30000", 10);
-const TAKE_PROFIT_THRESHOLD = 1.0; // +100%
-const STOP_LOSS_THRESHOLD = -0.5; // -50%
 const activeWatchers = new Map();
 export function startWatcher(position, notify) {
     if (activeWatchers.has(position.id)) {
-        console.log(`[Watcher] Already watching ${position.symbol} (${position.id}`);
+        console.log(`[Watcher] Already watching ${position.symbol} (${position.id})`);
         return;
     }
-    console.log(`[Watcher] ▶ ${position.symbol} | entry $${position.entryPrice} | poll every ${POLL_INTERVAL_MS / 1000}s`);
+    console.log(`[Watcher] ▶ ${position.symbol} | ${position.strategyProfileId} | TP ${(position.takeProfitThreshold * 100).toFixed(0)}% SL ${(position.stopLossThreshold * 100).toFixed(0)}% | entry $${position.entryPrice} | poll ${POLL_INTERVAL_MS / 1000}s`);
     const handle = setInterval(() => {
         tick(position, notify).catch((err) => console.error(`[Watcher] Unhandled error for ${position.symbol}: `, err));
     }, POLL_INTERVAL_MS);
@@ -52,10 +50,10 @@ async function tick(position, notify) {
     const changePct = (change * 100).toFixed(2);
     const indicator = change >= 0 ? "▲" : "▼";
     console.log(`[Watcher] ${position.symbol} ${indicator} $${currentPrice} (${changePct}%) | entry $${position.entryPrice}`);
-    if (change >= TAKE_PROFIT_THRESHOLD) {
+    if (change >= position.takeProfitThreshold) {
         await exit(position, currentPrice, "TAKE_PROFIT", notify);
     }
-    else if (change <= STOP_LOSS_THRESHOLD) {
+    else if (change <= position.stopLossThreshold) {
         await exit(position, currentPrice, "STOP_LOSS", notify);
     }
 }

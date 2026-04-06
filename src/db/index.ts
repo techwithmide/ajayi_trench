@@ -115,7 +115,10 @@ function initSchema(db: Database.Database): void {
     current_price REAL,
     last_updated INTEGER,
     opened_by_user_id INTEGER,
-    opened_by_username TEXT
+    opened_by_username TEXT,
+    take_profit_threshold REAL NOT NULL DEFAULT 0.6,
+    stop_loss_threshold REAL NOT NULL DEFAULT -0.4,
+    strategy_profile_id TEXT NOT NULL DEFAULT 'trench_60'
     );
     `);
   migratePositionsColumns(db);
@@ -132,6 +135,21 @@ function migratePositionsColumns(db: Database.Database): void {
   if (!names.has("opened_by_username")) {
     db.exec("ALTER TABLE positions ADD COLUMN opened_by_username TEXT");
   }
+  if (!names.has("take_profit_threshold")) {
+    db.exec(
+      "ALTER TABLE positions ADD COLUMN take_profit_threshold REAL NOT NULL DEFAULT 0.6",
+    );
+  }
+  if (!names.has("stop_loss_threshold")) {
+    db.exec(
+      "ALTER TABLE positions ADD COLUMN stop_loss_threshold REAL NOT NULL DEFAULT -0.4",
+    );
+  }
+  if (!names.has("strategy_profile_id")) {
+    db.exec(
+      "ALTER TABLE positions ADD COLUMN strategy_profile_id TEXT NOT NULL DEFAULT 'trench_60'",
+    );
+  }
 }
 
 export function createPosition(pos: Omit<Position, "status">): Position {
@@ -141,8 +159,8 @@ export function createPosition(pos: Omit<Position, "status">): Position {
   db.prepare(
     `
   INSERT INTO positions (
-id, chat_id,  mint, symbol, name, entry_price, entry_time, virtual_usd, token_amount_raw, status, current_price, last_updated, opened_by_user_id, opened_by_username) VALUES (
-@id, @chat_id, @mint, @symbol, @name, @entryPrice, @entryTime, @virtualUsd, @tokenAmountRaw, @status, @currentPrice, @lastUpdated, @openedByUserId, @openedByUsername
+id, chat_id,  mint, symbol, name, entry_price, entry_time, virtual_usd, token_amount_raw, status, current_price, last_updated, opened_by_user_id, opened_by_username, take_profit_threshold, stop_loss_threshold, strategy_profile_id) VALUES (
+@id, @chat_id, @mint, @symbol, @name, @entryPrice, @entryTime, @virtualUsd, @tokenAmountRaw, @status, @currentPrice, @lastUpdated, @openedByUserId, @openedByUsername, @takeProfitThreshold, @stopLossThreshold, @strategyProfileId
 )
   `,
   ).run({
@@ -160,6 +178,9 @@ id, chat_id,  mint, symbol, name, entry_price, entry_time, virtual_usd, token_am
     lastUpdated: position.lastUpdated ?? Date.now(),
     openedByUserId: position.openedByUserId ?? null,
     openedByUsername: position.openedByUsername ?? null,
+    takeProfitThreshold: position.takeProfitThreshold,
+    stopLossThreshold: position.stopLossThreshold,
+    strategyProfileId: position.strategyProfileId,
   });
   return position;
 }
@@ -333,6 +354,12 @@ ORDER BY realisedPnl DESC
 }
 
 function rowToPosition(row: any): Position {
+  const profileRaw = String(row.strategy_profile_id ?? "trench_60");
+  const strategyProfileId =
+    profileRaw === "trench_30" || profileRaw === "trench_100" || profileRaw === "trench_60"
+      ? profileRaw
+      : "trench_60";
+
   return {
     id: row.id,
     chatId: String(row.chat_id),
@@ -354,5 +381,10 @@ function rowToPosition(row: any): Position {
     lastUpdated: row.last_updated ?? undefined,
     openedByUserId: row.opened_by_user_id ?? null,
     openedByUsername: row.opened_by_username ?? null,
+    takeProfitThreshold:
+      row.take_profit_threshold != null ? row.take_profit_threshold : 0.6,
+    stopLossThreshold:
+      row.stop_loss_threshold != null ? row.stop_loss_threshold : -0.4,
+    strategyProfileId,
   };
 }

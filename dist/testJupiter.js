@@ -1,4 +1,4 @@
-import { simulateBuy, simulateSell } from "./simulation/lite-jupiter.js";
+import { simulateBuy, simulateSell } from "./simulation/jupiter.js";
 async function main() {
     // Example meme token (you can replace this)
     const tokenMint = "6KByfCna35oaFJ6gXAM8XmX7YxCnRqRvYqczcU2Apump"; // MOON

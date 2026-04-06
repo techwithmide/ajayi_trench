@@ -1,9 +1,20 @@
 import type { JupiterQuote, SimulatedTrade } from "../types.js";
+import dotenv from "dotenv";
 
-const QUOTE_URL = "https://quote-api.jup.ag/v6/quote";
+dotenv.config();
+
+// ✅ Jupiter migrated away from quote-api.jup.ag — this is the current endpoint
+const QUOTE_URL = "https://api.jup.ag/swap/v1/quote";
+
+const API_KEY = process.env.JUPITER_API_KEY ?? "";
+
+if (!API_KEY) {
+  throw new Error("JUPITER_API_KEY is not set in .env");
+}
+
 const USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 const USDC_DECIMALS = 6;
-const SLIPPAGE_BPS = 300; // 3% - reasonable for new tokens
+const SLIPPAGE_BPS = 300; // 3%
 
 export async function simulateBuy(
   tokenMint: string,
@@ -20,12 +31,9 @@ export async function simulateBuy(
       onlyDirectRoutes: "false",
     });
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 12_000);
     const res = await fetch(`${QUOTE_URL}?${params.toString()}`, {
-      signal: controller.signal,
+      headers: { "x-api-key": API_KEY },
     });
-    clearTimeout(timeoutId);
 
     if (!res.ok) {
       const text = await res.text();
@@ -42,8 +50,43 @@ export async function simulateBuy(
       route: buildRouteLabel(data),
     };
   } catch (err: any) {
-    const detail = err?.message || "Unknown error";
-    console.error("[Jupiter] simulateBuy failed:", detail);
+    console.error("[Jupiter] simulateBuy failed:", err?.message, err?.cause);
+    return null;
+  }
+}
+
+export async function simulateSell(
+  tokenMint: string,
+  tokenAmountRaw: string,
+): Promise<SimulatedTrade | null> {
+  try {
+    const params = new URLSearchParams({
+      inputMint: tokenMint,
+      outputMint: USDC_MINT,
+      amount: tokenAmountRaw,
+      slippageBps: SLIPPAGE_BPS.toString(),
+    });
+
+    const res = await fetch(`${QUOTE_URL}?${params.toString()}`, {
+      headers: { "x-api-key": API_KEY },
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`HTTP ${res.status}: ${text}`);
+    }
+
+    const data: JupiterQuote = await res.json();
+
+    return {
+      inputAmountRaw: tokenAmountRaw,
+      outputAmountRaw: data.outAmount,
+      outputUsd: Number(data.outAmount) / 10 ** USDC_DECIMALS,
+      priceImpactPct: parseFloat(String(data.priceImpactPct ?? 0)),
+      route: buildRouteLabel(data),
+    };
+  } catch (err: any) {
+    console.error("[Jupiter] simulateSell failed:", err?.message, err?.cause);
     return null;
   }
 }
@@ -53,6 +96,6 @@ function buildRouteLabel(quote: JupiterQuote): string {
     quote.routePlan
       ?.map((r) => r.swapInfo?.label ?? r.swapInfo?.ammKey?.slice(0, 8))
       .filter(Boolean)
-      .join("→") || "Direct"
+      .join(" → ") || "Direct"
   );
 }
