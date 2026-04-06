@@ -33,7 +33,7 @@ async function main() {
   const pnl = finalUsd - buy.outputUsd;
   const pnlPct = (pnl / buy.outputUsd) * 100;
 
-  console.log("\n📊 ROUND TRIP SUMMARY:");
+  console.log("\nROUND TRIP SUMMARY:");
   console.log({
     startUsd: buy.outputUsd,
     endUsd: finalUsd,

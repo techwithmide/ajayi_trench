@@ -83,7 +83,7 @@ async function tick(position: Position, notify: NotifyFn): Promise<void> {
   const change = (currentPrice - position.entryPrice) / position.entryPrice;
 
   const changePct = (change * 100).toFixed(2);
-  const indicator = change >= 0 ? "▲" : "▼";
+  const indicator = change >= 0 ? "+" : "-";
 
   console.log(
     `[Watcher] ${position.symbol} ${indicator} $${currentPrice} (${changePct}%) | entry $${position.entryPrice}`,
@@ -115,34 +115,34 @@ async function exit(
   if (!closed) return;
 
   const isWin = (closed.pnlUsd ?? 0) >= 0;
-  const emoji = isWin ? "🟢" : "🔴";
+  const emoji = isWin ? "WIN" : "LOSS";
   const label = reason === "TAKE_PROFIT" ? "Take Profit Hit" : "Stop Loss Hit";
 
   const tokenInfo = await fetchTokenInfo(position.mint).catch(() => null);
   const capLine =
     tokenInfo?.marketCap != null
-      ? `🏷 MCap: ${formatCompactUsd(tokenInfo.marketCap)}`
+      ? `MCap: ${formatCompactUsd(tokenInfo.marketCap)}`
       : tokenInfo?.fdv != null
-        ? `🏷 FDV: ${formatCompactUsd(tokenInfo.fdv)}`
+        ? `FDV: ${formatCompactUsd(tokenInfo.fdv)}`
         : null;
 
   const jupiterInfo = trade
     ? [
-        `📉 Slippage: <b>${trade.priceImpactPct.toFixed(2)}%</b>`,
-        `🔀 Route: ${trade.route}`,
+        `Slippage: <b>${trade.priceImpactPct.toFixed(2)}%</b>`,
+        `Route: ${trade.route}`,
       ].join("\n")
-    : "⚠️ Jupiter route unavailable — P&L estimated from price";
+    : "Jupiter route unavailable — P&L estimated from price";
 
   const msg = [
     `${emoji} <b>${label} — $${position.symbol}</b>`,
     ...(capLine ? [capLine] : []),
     ``,
-    `📍 Entry:       ${formatUsd(position.entryPrice)}`,
-    `📍 Exit:        ${formatUsd(currentPrice)}`,
+    `Entry:       ${formatUsd(position.entryPrice)}`,
+    `Exit:        ${formatUsd(currentPrice)}`,
     ``,
-    `💵 Deployed:    ${formatUsd(position.virtualUsd)}`,
-    `💰 Returned:    ${formatUsd(exitUsd)}`,
-    `📊 P&L:         ${formatPnL(closed.pnlUsd!)} (${formatPercent(closed.pnlPercent!)})`,
+    `Deployed:    ${formatUsd(position.virtualUsd)}`,
+    `Returned:    ${formatUsd(exitUsd)}`,
+    `P&L:         ${formatPnL(closed.pnlUsd!)} (${formatPercent(closed.pnlPercent!)})`,
     ``,
     jupiterInfo,
     ``,

@@ -140,7 +140,7 @@ export function createBot(token: string): Bot {
     if (!allowed) {
       if (chatId) console.warn(`[Auth] blocked chat=${chatId} user=@${username ?? "?"}`);
       try {
-        await ctx.reply("⛔️ This bot is in a closed test.");
+        await ctx.reply("Access denied. This bot is in a closed test.");
       } catch {}
       return;
     }
@@ -212,14 +212,14 @@ export function createBot(token: string): Bot {
     const existing = getOpenPositionByMintForChat(mint, chatIdStr);
     if (existing) {
       await ctx.reply(
-        `⚠️ Already tracking <b>${existing.symbol}</b>\n` +
+        `Already tracking <b>${existing.symbol}</b>\n` +
           `<code>${truncateAddress(mint)}</code> | ID: <code>${existing.id}</code>`,
         { parse_mode: "HTML" },
       );
       return;
     }
 
-    const status = await ctx.reply("🔍 Fetching token info…");
+    const status = await ctx.reply("Fetching token info...");
     const edit = (text: string) =>
       ctx.api.editMessageText(chatId, status.message_id, text, {
         parse_mode: "HTML",
@@ -237,12 +237,12 @@ export function createBot(token: string): Bot {
       }
 
       // ── Step 2: Simulate the buy via Jupiter ──
-      await edit(`⚙️ Simulating $${VIRTUAL_USD} buy via Jupiter…`);
+      await edit(`Simulating $${VIRTUAL_USD} buy via Jupiter...`);
       const trade = await simulateBuy(mint, VIRTUAL_USD);
 
       if (!trade) {
         await edit(
-          `⚠️ <b>${tokenInfo.symbol}</b> — Jupiter has no route for this token yet.\n\n` +
+          `<b>${tokenInfo.symbol}</b> — Jupiter has no route for this token yet.\n\n` +
             `Position will still be tracked by price change only (no slippage simulation at exit).`,
         );
       }
@@ -275,8 +275,8 @@ export function createBot(token: string): Bot {
       startWatcher(position, notify);
 
       const jupiterBlock = trade
-        ? `🔀 Route: ${trade.route}\n📉 Entry impact: ${trade.priceImpactPct.toFixed(2)}%`
-        : `⚠️ No Jupiter route — tracking by price change`;
+        ? `Route: ${trade.route}\nEntry impact: ${trade.priceImpactPct.toFixed(2)}%`
+        : `No Jupiter route — tracking by price change`;
 
       const capLine =
         tokenInfo.marketCap != null
@@ -294,7 +294,7 @@ export function createBot(token: string): Bot {
           `ID:   <code>${position.id}</code>\n\n` +
           `${jupiterBlock}\n\n` +
           `${formatTpSlFromFractions(position.takeProfitThreshold, position.stopLossThreshold)}  ·  <code>${position.strategyProfileId}</code>\n` +
-          `📡 Poll: <b>${POLL_SEC}s</b>`,
+          `Poll: <b>${POLL_SEC}s</b>`,
       );
     } catch (err: any) {
       console.error("[Bot] Error opening position:", err);
@@ -317,7 +317,7 @@ export function createBot(token: string): Bot {
       const current = p.currentPrice ?? p.entryPrice;
       const changePct = ((current - p.entryPrice) / p.entryPrice) * 100;
       const unrealised = (changePct / 100) * p.virtualUsd;
-      const arrow = changePct >= 0 ? "🟢" : "🔴";
+      const arrow = changePct >= 0 ? "+" : "-";
       const held = formatDuration(p.entryTime, Date.now());
 
       return [
@@ -346,7 +346,7 @@ export function createBot(token: string): Bot {
     const recent = positions.slice(0, 15);
     const lines = recent.map((p, i) => {
       const isWin = (p.pnlUsd ?? 0) >= 0;
-      const emoji = isWin ? "🟢" : "🔴";
+      const emoji = isWin ? "WIN" : "LOSS";
       const tag =
         p.exitReason === "TAKE_PROFIT"
           ? "TP"
@@ -408,7 +408,7 @@ export function createBot(token: string): Bot {
       `<b>Performance Summary</b>\n\n` +
         `<b>Trades</b>\n` +
         `Closed: <b>${totalTrades}</b>  |  Open: <b>${open.length}</b>\n` +
-        `🟢 Wins: <b>${wins}</b>  🔴 Losses: <b>${losses}</b>\n` +
+        `Wins: <b>${wins}</b>  Losses: <b>${losses}</b>\n` +
         `Win rate: <b>${winRate}%</b>\n` +
         `Avg win: <b>${formatUsd(avgWin)}</b>  Avg loss: <b>${formatUsd(Math.abs(avgLoss))}</b>\n\n` +
         `<b>P&L</b>\n` +
@@ -446,7 +446,7 @@ export function createBot(token: string): Bot {
 
         return [
           `${medal}<b>${who}</b>`,
-          `   P&amp;L: <b>${formatPnL(e.realisedPnl)}</b>  |  🟢 ${e.wins}W  🔴 ${e.losses}L  (${wr}% WR)  ·  ${e.trades} closed`,
+          `   P&amp;L: <b>${formatPnL(e.realisedPnl)}</b>  |  ${e.wins}W  ${e.losses}L  (${wr}% WR)  ·  ${e.trades} closed`,
         ].join("\n");
       }),
     );
@@ -486,7 +486,7 @@ export function createBot(token: string): Bot {
     }
 
     const closing = await ctx.reply(
-      `⏳ Fetching exit price for <b>$${position.symbol}</b>…`,
+      `Fetching exit price for <b>$${position.symbol}</b>...`,
       { parse_mode: "HTML" },
     );
 
@@ -520,7 +520,7 @@ export function createBot(token: string): Bot {
     }
 
     const jupBlock = trade
-      ? `Route: ${trade.route}\n📉 Exit slippage: ${trade.priceImpactPct.toFixed(2)}%`
+      ? `Route: ${trade.route}\nExit slippage: ${trade.priceImpactPct.toFixed(2)}%`
       : `Jupiter unavailable — P&L estimated from price`;
 
     await ctx.api.editMessageText(

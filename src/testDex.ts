@@ -38,7 +38,7 @@ async function testBatchFetchPrices() {
   const returned = Object.keys(prices);
   const extras = returned.filter((m) => !mints.includes(m));
   if (extras.length > 0) {
-    console.warn("  ⚠ Unexpected mints in result:", extras);
+    console.warn("  Unexpected mints in result:", extras);
   } else {
     console.log("  ✓ No extra mints in result");
   }
