@@ -30,6 +30,7 @@ import {
   generateId,
   escapeHtml,
   formatTpSlFromFractions,
+  formatCompactUsd,
 } from "../utils/format.js";
 import type { LeaderboardEntry } from "../types.js";
 import {
@@ -277,9 +278,17 @@ export function createBot(token: string): Bot {
         ? `🔀 Route: ${trade.route}\n📉 Entry impact: ${trade.priceImpactPct.toFixed(2)}%`
         : `⚠️ No Jupiter route — tracking by price change`;
 
+      const capLine =
+        tokenInfo.marketCap != null
+          ? `MCap:        ${formatCompactUsd(tokenInfo.marketCap)}\n`
+          : tokenInfo.fdv != null
+            ? `FDV:         ${formatCompactUsd(tokenInfo.fdv)}\n`
+            : "";
+
       await edit(
         `<b>Position Opened — $${tokenInfo.symbol}</b>\n\n` +
           `Entry price:  ${formatUsd(tokenInfo.priceUsd)}\n` +
+          capLine +
           `Virtual size: ${formatUsd(VIRTUAL_USD)}\n` +
           `Mint: <code>${mint}</code>\n` +
           `ID:   <code>${position.id}</code>\n\n` +
@@ -486,6 +495,14 @@ export function createBot(token: string): Bot {
       position.currentPrice ??
       position.entryPrice;
 
+    const tokenInfo = await fetchTokenInfo(position.mint).catch(() => null);
+    const capLine =
+      tokenInfo?.marketCap != null
+        ? `MCap:     ${formatCompactUsd(tokenInfo.marketCap)}\n`
+        : tokenInfo?.fdv != null
+          ? `FDV:      ${formatCompactUsd(tokenInfo.fdv)}\n`
+          : "";
+
     const trade = await simulateSell(position.mint, position.tokenAmountRaw);
     const exitUsd =
       trade?.outputUsd ?? (currentPrice / position.entryPrice) * VIRTUAL_USD;
@@ -512,6 +529,7 @@ export function createBot(token: string): Bot {
       `<b>Manually Closed — $${position.symbol}</b>\n\n` +
         `Entry:    ${formatUsd(position.entryPrice)}\n` +
         `Exit:     ${formatUsd(currentPrice)}\n` +
+        capLine +
         `Returned: ${formatUsd(exitUsd)}\n` +
         `P&L:      ${formatPnL(closed.pnlUsd!)} (${formatPercent(closed.pnlPercent!)})\n\n` +
         `${jupBlock}\n` +

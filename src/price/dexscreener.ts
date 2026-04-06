@@ -49,6 +49,19 @@ export async function fetchDexScreenerPrices(
 
       const liquidity: number = pair.liquidity?.usd ?? 0;
       if (!result[mint] || liquidity > (result[mint].liquidity ?? 0)) {
+        const marketCap =
+          typeof pair.marketCap === "number"
+            ? pair.marketCap
+            : pair.marketCap != null
+              ? Number(pair.marketCap)
+              : undefined;
+        const fdv =
+          typeof pair.fdv === "number"
+            ? pair.fdv
+            : pair.fdv != null
+              ? Number(pair.fdv)
+              : undefined;
+
         result[mint] = {
           mint,
           symbol: pair.baseToken.symbol || "UNKNOWN",
@@ -57,6 +70,8 @@ export async function fetchDexScreenerPrices(
           liquidity,
           volume24h: pair.volume?.h24 ?? 0,
           priceChange24h: pair.priceChange?.h24 ?? 0,
+          marketCap: Number.isFinite(marketCap) ? marketCap : undefined,
+          fdv: Number.isFinite(fdv) ? fdv : undefined,
         };
       }
     }

@@ -4,7 +4,7 @@ import {
   updatePositionPrice,
   closePosition,
 } from "../db/index.js";
-import { fetchCurrentPrice } from "../price/index.js";
+import { fetchCurrentPrice, fetchTokenInfo } from "../price/index.js";
 import { simulateSell } from "../simulation/lite-jupiter.js";
 import type { Position } from "../types.js";
 import {
@@ -12,6 +12,7 @@ import {
   formatPnL,
   formatPercent,
   formatDuration,
+  formatCompactUsd,
 } from "../utils/format.js";
 
 const POLL_INTERVAL_MS = parseInt(process.env.POLL_INTERVAL_MS ?? "30000", 10);
@@ -117,6 +118,14 @@ async function exit(
   const emoji = isWin ? "🟢" : "🔴";
   const label = reason === "TAKE_PROFIT" ? "Take Profit Hit" : "Stop Loss Hit";
 
+  const tokenInfo = await fetchTokenInfo(position.mint).catch(() => null);
+  const capLine =
+    tokenInfo?.marketCap != null
+      ? `🏷 MCap: ${formatCompactUsd(tokenInfo.marketCap)}`
+      : tokenInfo?.fdv != null
+        ? `🏷 FDV: ${formatCompactUsd(tokenInfo.fdv)}`
+        : null;
+
   const jupiterInfo = trade
     ? [
         `📉 Slippage: <b>${trade.priceImpactPct.toFixed(2)}%</b>`,
@@ -126,6 +135,7 @@ async function exit(
 
   const msg = [
     `${emoji} <b>${label} — $${position.symbol}</b>`,
+    ...(capLine ? [capLine] : []),
     ``,
     `📍 Entry:       ${formatUsd(position.entryPrice)}`,
     `📍 Exit:        ${formatUsd(currentPrice)}`,

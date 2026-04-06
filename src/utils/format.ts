@@ -19,6 +19,17 @@ export function formatTpSlFromFractions(tp: number, sl: number): string {
   return `TP <b>${formatPercent(tp * 100)}</b> · SL <b>${formatPercent(sl * 100)}</b>`;
 }
 
+export function formatCompactUsd(amount: number): string {
+  const abs = Math.abs(amount);
+  if (!Number.isFinite(abs)) return "$0";
+  const sign = amount < 0 ? "-" : "";
+  if (abs >= 1e12) return `${sign}$${(abs / 1e12).toFixed(2)}T`;
+  if (abs >= 1e9) return `${sign}$${(abs / 1e9).toFixed(2)}B`;
+  if (abs >= 1e6) return `${sign}$${(abs / 1e6).toFixed(2)}M`;
+  if (abs >= 1e3) return `${sign}$${(abs / 1e3).toFixed(2)}K`;
+  return `${sign}$${abs.toFixed(0)}`;
+}
+
 export function formatDuration(startMs: number, endMs: number): string {
   const diff = endMs - startMs;
   const totalMins = Math.floor(diff / 60_000);

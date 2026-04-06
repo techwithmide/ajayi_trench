@@ -60,6 +60,9 @@ export interface TokenInfo {
   liquidity?: number;
   volume24h?: number;
   priceChange24h?: number;
+  /** DexScreener sometimes provides one or both; optional. */
+  marketCap?: number;
+  fdv?: number;
 }
 
 // JUPITER
