@@ -107,11 +107,53 @@ export async function simulateSell(
     };
   } catch (err: any) {
     console.error(
-      "[Jupiter] simulateBuy failed: ",
+      "[Jupiter] simulateSell failed: ",
       err?.cause ?? err?.message ?? err,
     );
   }
   return null;
+}
+
+/**
+ * True if Jupiter returns a quote for selling this token amount to USDC (same endpoint as simulateSell).
+ * Used to detect repeated “no route” / untradeable states without logging every failure.
+ */
+export async function probeSellQuote(
+  tokenMint: string,
+  tokenAmountRaw: string,
+): Promise<boolean> {
+  const raw = tokenAmountRaw.trim();
+  if (raw === "0" || raw === "") return true;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0) return true;
+
+  const inputAmountRaw = Math.floor(n).toString();
+
+  try {
+    const params = new URLSearchParams({
+      inputMint: tokenMint,
+      outputMint: USDC_MINT,
+      amount: inputAmountRaw,
+      slippageBps: SLIPPAGE_BPS.toString(),
+      onlyDirectRoutes: "false",
+    });
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12_000);
+
+    const res = await fetch(`${QUOTE_URL}?${params.toString()}`, {
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    if (!res.ok) return false;
+
+    const data = (await res.json()) as JupiterLiteQuote;
+    const out = data?.outAmount;
+    return typeof out === "string" && out.length > 0 && out !== "0";
+  } catch {
+    return false;
+  }
 }
 
 function buildRouteLabel(quote: JupiterLiteQuote): string {

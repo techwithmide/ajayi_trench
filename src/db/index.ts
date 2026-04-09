@@ -197,7 +197,12 @@ export function closePosition(
   id: string,
   exitPrice: number,
   exitUsd: number,
-  exitReason: "TAKE_PROFIT" | "STOP_LOSS" | "MANUAL",
+  exitReason:
+    | "TAKE_PROFIT"
+    | "STOP_LOSS"
+    | "MANUAL"
+    | "LIQUIDITY_REMOVED"
+    | "NO_EXIT_ROUTE",
 ): Position | null {
   const pos = getPositionById(id);
   if (!pos) return null;

@@ -23,7 +23,12 @@ export interface Position {
   pnlUsd?: number;
   pnlPercent?: number;
   status: "OPEN" | "CLOSED";
-  exitReason?: "TAKE_PROFIT" | "STOP_LOSS" | "MANUAL";
+  exitReason?:
+    | "TAKE_PROFIT"
+    | "STOP_LOSS"
+    | "MANUAL"
+    | "LIQUIDITY_REMOVED"
+    | "NO_EXIT_ROUTE";
   currentPrice?: number;
   lastUpdated?: number;
   /** Telegram user who opened the trade (for per-chat leaderboard). */

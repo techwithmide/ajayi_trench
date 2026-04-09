@@ -352,7 +352,11 @@ export function createBot(token: string): Bot {
           ? "TP"
           : p.exitReason === "STOP_LOSS"
             ? "SL"
-            : "Manual";
+            : p.exitReason === "LIQUIDITY_REMOVED"
+              ? "Liq"
+              : p.exitReason === "NO_EXIT_ROUTE"
+                ? "Route"
+                : "Manual";
 
       return [
         `${i + 1}. ${emoji} <b>$${p.symbol}</b> [${tag}]`,
