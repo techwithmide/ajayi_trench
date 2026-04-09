@@ -450,7 +450,7 @@ export function createBot(token: string): Bot {
 
         return [
           `${medal}<b>${who}</b>`,
-          `   P&amp;L: <b>${formatPnL(e.realisedPnl)}</b>  |  ${e.wins}W  ${e.losses}L  (${wr}% WR)  ·  ${e.trades} closed`,
+          `   P&amp;L: <b>${formatPnL(e.realisedPnl)}</b>  |  🟢 ${e.wins}W  🔴 ${e.losses}L  (${wr}% WR)  ·  ${e.trades} closed`,
         ].join("\n");
       }),
     );
